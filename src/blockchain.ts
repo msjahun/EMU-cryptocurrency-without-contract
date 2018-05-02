@@ -4,21 +4,10 @@ import { Set } from "typescript-collections";
 import { serialize, deserialize } from "serializer.ts/Serializer";
 import BigNumber from "bignumber.js";
 import deepEqual = require("deep-equal");
-import {
-  Address,
-  Account,
-  ExternalAccount,
-  ContractAccount,
-  CONTRACT_ACCOUNT,
-  EXTERNAL_ACCOUNT
-} from "./accounts";
+import {Address,Account,ExternalAccount,EXTERNAL_ACCOUNT} from "./accounts";
 import { ACTIONS } from "./actions";
 import { Block } from "./block";
-import {
-  Transaction,
-  AccountTransaction,
-  ContractTransaction
-} from "./transaction";
+import {Transaction, AccountTransaction} from "./transaction";
 import { Node } from "./node";
 import {
   verifyDigitalSignature,
@@ -78,31 +67,7 @@ export class Blockchain {
   public updateAccounts(nodes: Array<Node>, currentNodeId: string) {
     this.nodes.forEach(node => {
       node.accounts.forEach(account => {
-        // Update Contract Account
-        if (account.type === CONTRACT_ACCOUNT) {
-          const nodeIdx = nodes.findIndex(node => node.id === currentNodeId);
-          if (nodeIdx === -1) {
-            throw new Error(
-              `blockchain.ts: updateAccounts: could not find contract account nodeId ${currentNodeId} `
-            );
-          }
-
-          const accountIdx = nodes[nodeIdx].accounts.findIndex(
-            accnt => accnt.address === account.address
-          );
-          if (accountIdx === -1) {
-            throw new Error(
-              `blockchain.ts: updateAccounts: could not find contract account ${currentNodeId} ${
-                account.address
-              } `
-            );
-          }
-
-          account.data = nodes[nodeIdx].accounts[accountIdx].data;
-          account.balance = nodes[nodeIdx].accounts[accountIdx].balance;
-          account.nonce = nodes[nodeIdx].accounts[accountIdx].nonce;
-          return;
-        }
+     
 
         // Update External Account
         const { nodeIdx, accountIdx } = getNodeAndAccountIndex(
@@ -135,15 +100,9 @@ export class Blockchain {
         "randomId"
       );
       this.nodes[nodeIdx].accounts.push(external_accnt);
-    } else {
-      const contract_accnt = new ContractAccount(
-        address,
-        balance,
-        account_type,
-        "randomId"
-      );
-      this.nodes[nodeIdx].accounts.push(contract_accnt);
-    }
+    } 
+    
+   
 
     // Submit Account_Creation Transaction
     this.submitTransaction(
@@ -427,54 +386,8 @@ export class Blockchain {
     return this.blocks.length;
   }
 
-  public getContracts(): any {
-    const currentNodeIdx = this.nodes.findIndex(
-      node => node.id === this.nodeId
-    );
-    if (currentNodeIdx === -1) {
-      throw new Error(
-        `blockchain.ts: getContracts -> could not find ${this.nodeId}`
-      );
-    }
+  
 
-    console.log(`get Contracts ${this.nodeId}`);
-    return this.nodes[currentNodeIdx].accounts.filter(
-      account => account.type === CONTRACT_ACCOUNT
-    );
-  }
 
-  public submitContract(
-    contractName: string,
-    value: number,
-    type: string,
-    data: string
-  ): any {
-    const parsedContract = eval(data);
-    const currentNodeIdx = this.nodes.findIndex(
-      node => node.id === this.nodeId
-    );
-    this.nodes[currentNodeIdx].accounts.push(
-      new ContractAccount(contractName, value, type, data)
-    );
-
-    this.submitTransaction(
-      new ContractTransaction(
-        this.nodeId,
-        contractName,
-        "NONE",
-        "NONE",
-        value,
-        ACTIONS.CREATE_CONTRACT_ACCOUNT,
-        0,
-        "NONE",
-        "NONE",
-        "NONE",
-        [],
-        "NONE",
-        data
-      ),
-      false
-    ); // init nonce
-    return parsedContract;
-  }
+  
 }

@@ -12,25 +12,20 @@ import { URL } from "url";
 import axios from "axios";
 import { Set } from "typescript-collections";
 import * as parseArgs from "minimist";
-import { Address, ContractAccount, CONTRACT_ACCOUNT } from "./accounts";
+import { Address } from "./accounts";
 import { ACTIONS } from "./actions";
-import {
-  Transaction,
-  ContractTransaction,
-  AccountTransaction
-} from "./transaction";
+import { Transaction,AccountTransaction} from "./transaction";
 import { Block } from "./block";
 import { Node } from "./node";
 import { Blockchain } from "./blockchain";
 import {
   getNodeAndAccountIndex,
-  getNodeAndContractIndex,
+ 
   getConsensus,
   getDigitalSignature,
   isCrossOriginRequest,
   getPublicKey,
-  encryptPasswords
-} from "./utils";
+  encryptPasswords} from "./utils";
 
 // Web server:
 const ARGS = parseArgs(process.argv.slice(2));
@@ -191,106 +186,7 @@ app.post(
   }
 );
 
-app.get("/contracts", (req: express.Request, res: express.Response) => {
-  const contracts = blockchain.getContracts();
-  res.json(contracts);
-});
 
-app.post("/deployContract", (req: express.Request, res: express.Response) => {
-  const { contractName, contract, value, type } = req.body;
-  blockchain.submitContract(contractName, value, type, contract);
-  res.end();
-});
-
-app.post(
-  "/propogateContract",
-  (req: express.Request, res: express.Response) => {
-    const { address, value, type, data } = req.body;
-    blockchain.submitContract(address, value, type, data);
-
-    const requests = blockchain.nodes
-      .filter(node => node.id !== nodeId)
-      .map(node =>
-        axios.post(`${node.url}deployContract`, {
-          contractName: address,
-          contract: data,
-          value: value,
-          type: type
-        })
-      );
-
-    if (requests.length === 0) {
-      res.json("There are no nodes to sync with!");
-      res.status(404);
-
-      return;
-    }
-    axios
-      .all(requests)
-      .then(
-        axios.spread((...responses) =>
-          responses.map(res => console.log(res.data))
-        )
-      )
-      .catch(err => {
-        console.log(err);
-        res.status(500);
-        res.json(err);
-        return;
-      });
-    res.json(`Successfully deployed ${address} contract`);
-  }
-);
-
-app.put(
-  "/mutateContract/:address",
-  (req: express.Request, res: express.Response) => {
-    const { address } = req.params;
-    const {
-      method,
-      initiaterNode,
-      initiaterAddress,
-      value,
-      action,
-      args
-    } = req.body;
-
-    const { nodeIdx, accountIdx } = getNodeAndContractIndex(
-      blockchain.nodes,
-      nodeId,
-      address,
-      "Could not find contract node or address"
-    );
-
-    const digitalSignature = getDigitalSignature(
-      blockchain.nodes,
-      initiaterNode,
-      initiaterAddress,
-      action
-    );
-
-    // Add transaction to blockchain
-    const transaction = blockchain.submitTransaction(
-      new ContractTransaction(
-        nodeId,
-        address,
-        "NONE",
-        "NONE",
-        100,
-        ACTIONS.TRANSACTION_CONTRACT_ACCOUNT,
-        blockchain.nodes[nodeIdx].accounts[accountIdx].nonce,
-        initiaterNode,
-        initiaterAddress,
-        method,
-        args,
-        digitalSignature
-      ),
-      false
-    );
-
-    res.end();
-  }
-);
 
 // Show all transactions in the transaction pool.
 app.get("/transactions", (req: express.Request, res: express.Response) => {

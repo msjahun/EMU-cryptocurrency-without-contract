@@ -3,12 +3,8 @@ import axios from "axios";
 import { serialize, deserialize } from "serializer.ts/Serializer";
 import { Blockchain } from "./blockchain";
 import { Node } from "./node";
-import {
-  Transaction,
-  ContractTransaction,
-  AccountTransaction
-} from "./transaction";
-import { Address, ContractAccount, CONTRACT_ACCOUNT } from "./accounts";
+import { Transaction, AccountTransaction} from "./transaction";
+import { Address} from "./accounts";
 import { ACTIONS } from "./actions";
 import { Block } from "./block";
 
@@ -19,9 +15,9 @@ export const getNodeAndAccountIndex = (
   errMsg: string,
   type?: string
 ) => {
-  if (type === ACTIONS.TRANSACTION_CONTRACT_ACCOUNT) {
+  /*if (type === ACTIONS.TRANSACTION_CONTRACT_ACCOUNT) {
     return getNodeAndContractIndex(nodes, nodeId, nodeAddress, errMsg);
-  }
+  }*/
 
   const nodeIdx = nodes.findIndex(node => node.id === nodeId);
   if (nodeIdx === -1) {
@@ -43,35 +39,7 @@ export const getNodeAndAccountIndex = (
   };
 };
 
-export const getNodeAndContractIndex = (
-  nodes: Array<Node>,
-  nodeId: string,
-  contractAddress: Address,
-  errMsg: string
-) => {
-  const nodeIdx = nodes.findIndex(node => node.id === nodeId);
-  if (nodeIdx === -1) {
-    throw new Error(
-      `utils.ts: getNodeAndContractIndex: ${errMsg} -> could not find accountIdx of ${nodeId}`
-    );
-  }
 
-  // Find contract by address
-  const accountIdx = nodes[nodeIdx].accounts.findIndex(
-    account =>
-      account.address === contractAddress && account.type === CONTRACT_ACCOUNT
-  );
-  if (accountIdx === -1) {
-    throw new Error(
-      `utils.ts: getNodeAndContractIndex: ${errMsg} -> could not find contractIndex of ${contractAddress}`
-    );
-  }
-
-  return {
-    nodeIdx,
-    accountIdx
-  };
-};
 
 export const postAccountUpdates = (blockchain: Blockchain, nodeId: string) => {
   const requests = blockchain.nodes
@@ -227,8 +195,7 @@ export const getNodesRequestingTransactionWithBalance = (
   // Filter transactions to only those moving funds
   const filteredPool = transactionPool.filter(tx => {
     return (
-      tx.transactionType === ACTIONS.TRANSACTION_EXTERNAL_ACCOUNT ||
-      tx.transactionType === ACTIONS.TRANSACTION_CONTRACT_ACCOUNT
+      tx.transactionType === ACTIONS.TRANSACTION_EXTERNAL_ACCOUNT 
     );
   });
 
@@ -269,7 +236,7 @@ export const validateAdequateFunds = (
 
   return txpool.filter(tx => {
     if (
-      !(tx.transactionType === ACTIONS.TRANSACTION_CONTRACT_ACCOUNT) &&
+     
       !(tx.transactionType === ACTIONS.TRANSACTION_EXTERNAL_ACCOUNT)
     ) {
       return true; // This does not move funds, no validation needed
@@ -296,7 +263,6 @@ export const updateAccountsWithFinalizedTransactions = (
 ) => {
   txpool.forEach(tx => {
     if (
-      !(tx.transactionType === ACTIONS.TRANSACTION_CONTRACT_ACCOUNT) &&
       !(tx.transactionType === ACTIONS.TRANSACTION_EXTERNAL_ACCOUNT)
     ) {
       return; // This does not move funds, no validation needed
@@ -327,38 +293,11 @@ export const updateAccountsWithFinalizedTransactions = (
         receiverIndexes.accountIdx
       ].balance +=
         tx.value;
-    } else {
-      const parsedContract = ContractAccount.parseContractData(
-        blockchain,
-        nodeIdx,
-        accountIdx,
-        blockchain.nodes[nodeIdx].accounts[accountIdx].nonce
-      );
+    } 
+    
+   
 
-      if (typeof parsedContract[tx.method] !== "function") {
-        throw new Error(
-          `server.ts: mutateContract -> method ${
-            tx.method
-          } does not exist on contract...`
-        );
-      }
 
-      const emittedTx =
-        tx.args.length === 0
-          ? parsedContract[tx.method]()
-          : parsedContract[tx.method](...tx.args);
-
-      if (emittedTx) {
-        blockchain.emittedTXMessages.push(emittedTx);
-      }
-
-      ContractAccount.updateContractState(
-        blockchain,
-        nodeIdx,
-        accountIdx,
-        parsedContract
-      );
-    }
   });
   blockchain.minedTxAwaitingConsensus = [];
 };
@@ -421,9 +360,7 @@ export const encryptPasswords = (blockchain: Blockchain, password: string) => {
   const passwordDictionary: any = {};
   blockchain.nodes.forEach(node => {
     node.accounts.forEach(account => {
-      if (account.type === CONTRACT_ACCOUNT) {
-        return;
-      }
+   
       passwordDictionary[account.address] = {
         nodeId: node.id,
         address: account.address,
