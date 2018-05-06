@@ -10,6 +10,7 @@ export class Block {
   public prevBlock: string;
 
   constructor(
+    //this is the constructor that initializes the fileds in the class
     blockNumber: number,
     transactions: Array<Transaction>,
     timestamp: number,
